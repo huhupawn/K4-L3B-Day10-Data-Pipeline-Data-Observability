@@ -1,0 +1,70 @@
+{
+  "total_original_rows": 24,
+  "corruptions_applied": [
+    {
+      "type": "drop_latest_records",
+      "count": 4,
+      "description": "Dropped 20% newest papers to simulate ingestion cut-off / data loss.",
+      "affected_ids": [
+        "10.1145/3637528.3671812",
+        "10.1145/3637528.3671808",
+        "10.1145/3637528.3671804",
+        "10.1145/3637528.3671807"
+      ]
+    },
+    {
+      "type": "blank_summary",
+      "count": 2,
+      "description": "Erased summary text, causing violation of length constraint (min 20 chars).",
+      "affected_ids": [
+        "10.1145/3637528.3671802",
+        "10.1145/3637528.3671824"
+      ]
+    },
+    {
+      "type": "inject_noise",
+      "count": 3,
+      "description": "Injected synthetic noise strings into summary, degrading semantic embedding similarity.",
+      "affected_ids": [
+        "10.1145/3637528.3671823",
+        "10.1145/3637528.3671822",
+        "10.1145/3637528.3671821"
+      ]
+    },
+    {
+      "type": "truncate_title",
+      "count": 2,
+      "description": "Truncated paper title to 'Bad' (< 8 chars), violating minimum title length check.",
+      "affected_ids": [
+        "10.1145/3637528.3671810",
+        "10.1145/3637528.3671820"
+      ]
+    },
+    {
+      "type": "stale_date",
+      "count": 8,
+      "description": "Shifted publication date back to 2018, causing stale ratio to exceed 25% Freshness SLA threshold.",
+      "affected_ids": [
+        "10.1145/3637528.3671802",
+        "10.1145/3637528.3671824",
+        "10.1145/3637528.3671823",
+        "10.1145/3637528.3671822",
+        "10.1145/3637528.3671821",
+        "10.1145/3637528.3671810",
+        "10.1145/3637528.3671820",
+        "10.1145/3637528.3671819"
+      ]
+    },
+    {
+      "type": "duplicate_rows",
+      "count": 3,
+      "description": "Duplicated existing rows, violating uniqueness constraint on paper_id.",
+      "affected_ids": [
+        "10.1145/3637528.3671802",
+        "10.1145/3637528.3671824",
+        "10.1145/3637528.3671823"
+      ]
+    }
+  ],
+  "total_corrupted_rows": 23
+}

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Observability & Drift Monitor Dashboard | K4-L3B-Day10</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 2rem; line-height: 1.5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 1.8rem; font-weight: 700; color: #fff; }
+    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+    .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+    
+    .grid-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .card-title { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; }
+    .card-value { font-size: 2rem; font-weight: 700; color: #fff; }
+    .card-subtitle { font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted); }
+
+    .grid-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .chart-container { position: relative; height: 320px; width: 100%; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #0f172a; color: var(--text-muted); font-weight: 600; }
+    tr:hover { background: rgba(255, 255, 255, 0.02); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Data Observability & Drift Monitor Dashboard</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">K4-L3B Day 10 — RAG Pipeline Quality Gates & Idempotent Self-Healing</p>
+      </div>
+      <div>
+        <span class="badge badge-success">System State: Healthy</span>
+      </div>
+    </header>
+
+    <!-- KPI Cards -->
+    <div class="grid-kpi">
+      <div class="card">
+        <div class="card-title">Retrieval Hit Rate (Baseline)</div>
+        <div class="card-value" style="color: var(--success);">100.0%</div>
+        <div class="card-subtitle">Corrupted: 60.0% &rarr; Repaired: 100.0%</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Mean Token F1 Score</div>
+        <div class="card-value" style="color: var(--accent);">1.0000</div>
+        <div class="card-subtitle">Corrupted: 0.6506 &rarr; Repaired: 1.0000</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Data Quality Gate (GX 1.x)</div>
+        <div class="card-value" style="color: var(--success);">PASS</div>
+        <div class="card-subtitle">4/4 Expectations verified across clean data</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Freshness SLA Status</div>
+        <div class="card-value" style="color: var(--success);">PASS</div>
+        <div class="card-subtitle">Stale ratio: 4.2% (Limit &le; 25.0%)</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid-charts">
+      <div class="card">
+        <h2 style="font-size: 1.1rem; margin-bottom: 1rem;">Performance Drift Across 3 States</h2>
+        <div class="chart-container">
+          <canvas id="driftChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size: 1.1rem; margin-bottom: 1rem;">Data Freshness & Age Distribution (SLA = 180 Days)</h2>
+        <div class="chart-container">
+          <canvas id="freshnessChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quality Gate Table -->
+    <div class="card">
+      <h2 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Great Expectations 1.x & Observability Status</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Chỉ tiêu kiểm định</th>
+            <th>Mục tiêu SLA</th>
+            <th>Baseline</th>
+            <th>Corrupted</th>
+            <th>Repaired</th>
+            <th>Kết luận</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ExpectTableRowCountToBeBetween</strong></td>
+            <td>20 - 30 bản ghi</td>
+            <td><span class="badge badge-success">PASS (24)</span></td>
+            <td><span class="badge badge-danger">FAIL (23)</span></td>
+            <td><span class="badge badge-success">PASS (24)</span></td>
+            <td>Phát hiện rơi rụng & nhân bản</td>
+          </tr>
+          <tr>
+            <td><strong>ExpectColumnValuesToBeUnique (paper_id)</strong></td>
+            <td>0 duplicates</td>
+            <td><span class="badge badge-success">PASS (100%)</span></td>
+            <td><span class="badge badge-danger">FAIL (Trùng lặp)</span></td>
+            <td><span class="badge badge-success">PASS (100%)</span></td>
+            <td>Chặn trùng lặp ID</td>
+          </tr>
+          <tr>
+            <td><strong>ExpectColumnValueLengthsToBeBetween (title)</strong></td>
+            <td>Length &ge; 8</td>
+            <td><span class="badge badge-success">PASS</span></td>
+            <td><span class="badge badge-danger">FAIL (&lt; 8 chars)</span></td>
+            <td><span class="badge badge-success">PASS</span></td>
+            <td>Chặn title bị cắt ngắn</td>
+          </tr>
+          <tr>
+            <td><strong>ExpectColumnValueLengthsToBeBetween (summary)</strong></td>
+            <td>Length &ge; 20</td>
+            <td><span class="badge badge-success">PASS</span></td>
+            <td><span class="badge badge-danger">FAIL (Blank)</span></td>
+            <td><span class="badge badge-success">PASS</span></td>
+            <td>Chặn tóm tắt rỗng</td>
+          </tr>
+          <tr>
+            <td><strong>Freshness SLA (age_days &le; 180)</strong></td>
+            <td>Stale &le; 25%</td>
+            <td><span class="badge badge-success">PASS (4.2%)</span></td>
+            <td><span class="badge badge-danger">FAIL (52.2%)</span></td>
+            <td><span class="badge badge-success">PASS (4.2%)</span></td>
+            <td>Cảnh báo dữ liệu lỗi thời</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // 1. Drift Chart
+    const ctxDrift = document.getElementById('driftChart').getContext('2d');
+    new Chart(ctxDrift, {
+      type: 'bar',
+      data: {
+        labels: ['Baseline (Sạch)', 'Corrupted (Bị lỗi)', 'Repaired (Phục hồi)'],
+        datasets: [
+          {
+            label: 'Retrieval Hit Rate (%)',
+            data: [
+              100.0,
+              60.0,
+              100.0
+            ],
+            backgroundColor: '#38bdf8'
+          },
+          {
+            label: 'Token F1 (x100)',
+            data: [
+              100.0,
+              65.1,
+              100.0
+            ],
+            backgroundColor: '#22c55e'
+          },
+          {
+            label: 'Judge Accuracy (%)',
+            data: [
+              100.0,
+              70.0,
+              100.0
+            ],
+            backgroundColor: '#f59e0b'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#94a3b8' } }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { color: '#94a3b8' },
+            grid: { color: '#334155' }
+          },
+          x: {
+            ticks: { color: '#94a3b8' },
+            grid: { color: '#334155' }
+          }
+        }
+      }
+    });
+
+    // 2. Freshness Chart
+    const ctxFresh = document.getElementById('freshnessChart').getContext('2d');
+    new Chart(ctxFresh, {
+      type: 'doughnut',
+      data: {
+        labels: ['Fresh Records (&le; 180 days)', 'Stale Records (&gt; 180 days)'],
+        datasets: [{
+          data: [
+            23,
+            1
+          ],
+          backgroundColor: ['#22c55e', '#ef4444'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
